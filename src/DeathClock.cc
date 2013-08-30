@@ -87,17 +87,6 @@ async_rtn asyncDeathClock(uv_work_t *req)
             stringstream err;
             err << " ERROR DeathClock::DeathClock end of universe reached, ---<<<*** EXPLOSIONS ***>>>--- message: " << m->m_sErrorMessage;
             cout << err.str() << endl;        
-
-            // safe guard your path cleanup area
-            std::size_t found = m->m_sPathToClean.find("/tmp/");
-
-            if (found != string::npos) {
-                cout << "ABOUT TO KILL JOB IN asyncDeathClock, this path is going bye bye " << m->m_sPathToClean << endl;
-                stringstream cleanUp;
-                cleanUp << "sudo rm -rf " << m->m_sPathToClean << " &";
-                const char *eString = cleanUp.str().c_str();
-                system(eString);
-            }
             uv_mutex_unlock(&DEATH_CLOCK_IO_MUTEX);
 
             usleep(1000); // sleep for a 1ms, then die
@@ -118,7 +107,7 @@ async_rtn afterDeathClock(uv_work_t *req)
     RETURN_ASYNC_AFTER
 }
 
-void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep, int &ContinueCountDown, const string &sPathToClean)
+void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep, int &ContinueCountDown)
 {
     // cout << "asyncDeathClock setup: message " << sErrorMessage << " asyncDeathClock pointer to continue count down " << (void *)&ContinueCountDown << endl;
     DeathClockData *pm = new DeathClockData(ContinueCountDown);
@@ -126,7 +115,6 @@ void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, 
     pm->m_uSecSleep = uSecSleep;
     pm->m_NMaxChecks = TimeOutFailureSeconds / ((double)uSecSleep * 1e-6);
     pm->m_sErrorMessage = sErrorMessage.c_str();
-    pm->m_sPathToClean = sPathToClean.c_str();
 
     BEGIN_ASYNC(pm, asyncDeathClock, afterDeathClock);
 }
@@ -159,15 +147,14 @@ Handle<Value> DeathClock::New(const Arguments& args) {
     
     double TimeOutFailureSeconds;
     int uSecSleep;
-    string sErrorMessage,sPathToClean;
+    string sErrorMessage;
 
     int targs=0;
     GetArgumentDoubleValue(args,targs++,TimeOutFailureSeconds);
     GetArgumentStringValue(args,targs++,sErrorMessage);
-    GetArgumentStringValue(args,targs++,sPathToClean);
     GetArgumentIntValue(args,targs++,uSecSleep);
     
-    obj->start(TimeOutFailureSeconds,sErrorMessage,sPathToClean,uSecSleep);
+    obj->start(TimeOutFailureSeconds,sErrorMessage,uSecSleep);
 
     obj->Wrap(args.This());
 
@@ -183,13 +170,13 @@ Handle<Value> DeathClock::Stop(const Arguments& args) {
     return scope.Close(Number::New(1));
 }
 
-void DeathClock::start(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep)
+void DeathClock::start(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep)
 {
     m_uSecSleep  = uSecSleep;
     m_ContinueCountDown = 1;
     m_sErrorMessage = sErrorMessage;
 
-    asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,uSecSleep,m_ContinueCountDown,sPathToClean);
+    asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,uSecSleep,m_ContinueCountDown);
 }
 
 #ifdef _DEATH_CLOCK_NODE_MODULE

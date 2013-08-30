@@ -4,9 +4,9 @@ var deathClockLib = require('../lib/DeathClock')
 
 console.log('activating 3 death clocks');
  
-var aDeathClock = new DeathClock(1,'end of the world a','',10000);
-var bDeathClock = new DeathClock(2,'end of the world b','',10000);
-var cDeathClock = new DeathClock(3,'end of the world c','',10000);
+var aDeathClock = new DeathClock(1,'end of the world a',10000);
+var bDeathClock = new DeathClock(2,'end of the world b',10000);
+var cDeathClock = new DeathClock(3,'end of the world c',10000);
 
 aDeathClock.Stop();
 bDeathClock.Stop();

@@ -33,7 +33,6 @@ struct DeathClockData {
     unsigned long   m_NMaxChecks;
     int             m_uSecSleep;
     string          m_sErrorMessage;
-    string          m_sPathToClean;
     int            &m_ContinueCountDown;
 };
 
@@ -45,7 +44,7 @@ protected:
     DeathClock() {};
     ~DeathClock() { stopDeathClock(); };
 
-    void start(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep = 10000);
+    void start(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep = 10000);
 
 
     static v8::Handle<v8::Value> New(const v8::Arguments& args);
