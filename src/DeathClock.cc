@@ -91,10 +91,10 @@ async_rtn asyncDeathClock(uv_work_t *req)
         // cout << msg.str() << endl;
         // uv_mutex_unlock(&DEATH_CLOCK_IO_MUTEX); 
         
-        if (m->m_Counter >= m->m_NMaxChecks) {
+        if (m->m_Counter >= m->m_NMaxChecks) {           
+            uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX);       
             DEATH_CLOCK_MAP[m->m_clockID] = 0;
             
-            uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX);       
             stringstream err;
             err << " ERROR DeathClock::DeathClock end of universe reached, ---<<<*** EXPLOSIONS ***>>>--- message: " << m->m_sErrorMessage;
             cout << err.str() << endl;        
