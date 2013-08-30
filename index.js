@@ -1,1 +1,1 @@
-module.exports = require('./lib/ModuleName');
+module.exports = require('./lib/DeathClock');

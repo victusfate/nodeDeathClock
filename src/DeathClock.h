@@ -34,10 +34,20 @@ struct DeathClockData {
     int            &m_ContinueCountDown;
 };
 
-class DeathClock {
+class DeathClock : public node::ObjectWrap {
 public:
-    DeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep = 10000);
-    ~DeathClock();
+    static void Init(v8::Handle<v8::Object> exports);
+
+protected:
+    DeathClock() {};
+    ~DeathClock() { stopDeathClock(); };
+
+    void start(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep = 10000);
+
+
+    static v8::Handle<v8::Value> New(const v8::Arguments& args);
+    static v8::Handle<v8::Value> Stop(const v8::Arguments& args);
+
     void stopDeathClock() { 
         // cout << "setting continue countdown to zero for " << m_sErrorMessage << " ptr " << (void *)&m_ContinueCountDown << endl;
         if (m_ContinueCountDown) m_ContinueCountDown = 0; 
@@ -49,6 +59,8 @@ public:
     int m_ContinueCountDown;
     string m_sErrorMessage;
 };
+
+
 
 
 #endif

@@ -8,8 +8,75 @@ typedef void async_rtn;
 #define RETURN_ASYNC
 #define RETURN_ASYNC_AFTER delete req;
 
-
 extern uv_mutex_t DEATH_CLOCK_IO_MUTEX;
+
+
+#include <v8.h>
+#include <node.h>
+#include <iostream>
+
+
+#include "moduleName.h"
+
+
+using namespace node;
+using namespace v8;
+using namespace std;
+
+
+// Convert a JavaScript string to a std::string.  To not bother too
+// much with string encodings we just use ascii.
+string ObjectToString(Local<Value> value) {
+    String::Utf8Value utf8_value(value);
+    return string(*utf8_value);
+}
+
+int GetArgumentIntValue ( const Arguments& args, int argNum, int &value )
+{
+    if (args[argNum]->IsNumber())
+    {
+        value = args[argNum]->Int32Value();
+    } 
+    else {
+        string emsg("GetArgumentIntValue arg " + ObjectToString(args[argNum]) + " not an integer");
+        ThrowException(Exception::TypeError(String::New(emsg.c_str())));
+        return PROCESS_FAIL;
+    }
+    return PROCESS_OK;
+}
+
+
+int GetArgumentDoubleValue ( const Arguments& args, int argNum, double &value )
+{
+    if (args[argNum]->IsNumber())
+    {
+        value = args[argNum]->NumberValue();
+    } 
+    else {
+        string emsg("GetArgumentDoubleValue arg " + ObjectToString(args[argNum]) + " not an number");
+        ThrowException(Exception::TypeError(String::New(emsg.c_str())));
+        return PROCESS_FAIL;
+    }
+    return PROCESS_OK;
+}
+
+
+int GetArgumentStringValue ( const Arguments& args, int argNum, string &value)
+{
+    if (args[argNum]->IsString())
+    {
+        value = ObjectToString(args[argNum]);    
+    } 
+    else {
+        string emsg("GetArgumentStringValue arg " + ObjectToString(args[argNum]) + " not an string");
+        ThrowException(Exception::TypeError(String::New(emsg.c_str())));
+        return PROCESS_FAIL;
+    }
+    return PROCESS_OK;
+
+}
+
+
 
 async_rtn asyncDeathClock(uv_work_t *req)
 {
@@ -72,12 +139,58 @@ void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, 
     BEGIN_ASYNC(pm, asyncDeathClock, afterDeathClock);
 }
 
+void DeathClock::Init(Handle<Object> exports) 
+{   
+    // Prepare constructor template
+    Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
+    tpl->SetClassName(String::NewSymbol("DeathClock"));
+    tpl->InstanceTemplate()->SetInternalFieldCount(1);
+    
+    // Prototype
+    tpl->PrototypeTemplate()->Set(String::NewSymbol("Stop"),
+      FunctionTemplate::New(Stop)->GetFunction());
 
-DeathClock::DeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep) :
-    m_uSecSleep(uSecSleep),
-    m_ContinueCountDown(1),
-    m_sErrorMessage(sErrorMessage)
+    Persistent<Function> constructor = Persistent<Function>::New(tpl->GetFunction());
+    exports->Set(String::NewSymbol("DeathClock"), constructor);
+}
+
+Handle<Value> DeathClock::New(const Arguments& args) {
+    HandleScope scope;
+
+    DeathClock* obj = new DeathClock();
+    
+    double TimeOutFailureSeconds;
+    int uSecSleep;
+    string sErrorMessage,sPathToClean;
+
+    int targs=0;
+    GetArgumentDoubleValue(args,targs++,TimeOutFailureSeconds);
+    GetArgumentStringValue(args,targs++,sErrorMessage);
+    GetArgumentStringValue(args,targs++,sPathToClean);
+    GetArgumentIntValue(args,targs++,uSecSleep);
+    
+    obj->start(TimeOutFailureSeconds,sErrorMessage,sPathToClean,uSecSleep);
+
+    obj->Wrap(args.This());
+
+    return args.This();
+}
+
+Handle<Value> DeathClock::Stop(const Arguments& args) {
+    HandleScope scope;
+
+    DeathClock* obj = ObjectWrap::Unwrap<DeathClock>(args.This());
+    obj->stopDeathClock();
+
+    return scope.Close(Number::New(1));
+}
+
+void DeathClock::start(double TimeOutFailureSeconds, const string &sErrorMessage, const string &sPathToClean, int uSecSleep)
 {
+    m_uSecSleep  = uSecSleep;
+    m_ContinueCountDown = 1;
+    m_sErrorMessage = sErrorMessage;
+
     asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,uSecSleep,m_ContinueCountDown,sPathToClean);
 }
 
@@ -85,3 +198,21 @@ DeathClock::~DeathClock()
 {
     stopDeathClock();
 }
+
+
+#ifdef _DEATH_CLOCK_NODE_MODULE
+
+extern "C" {
+  static void init(Handle<Object> exports)
+  {
+      HandleScope scope;
+      cout << "_DEATH_CLOCK_NODE_MODULE is defined " << endl;
+
+      // classes
+      DeathClock::Init(exports);
+  }
+
+  NODE_MODULE(deathClock, init)
+}
+
+#endif

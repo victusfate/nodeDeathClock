@@ -1,7 +1,6 @@
-![ModuleName](https://github.com/victusfate/nodeModuleTemplate/raw/master/nodejs-dark.png)
-ModuleName
+![DeathClock](https://github.com/victusfate/nodeDeathClock/raw/master/Dethklok.png)
+DeathClock
 ===
 
-ModuleName will do something wonderful, like rapidly scaffold boilerplate module code.
+DeathClock starts a doomsday countdown in a separate uv worker thread
 
-more info: [addons](http://nodejs.org/api/addons.html)

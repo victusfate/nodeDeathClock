@@ -1,15 +1,14 @@
 {
-    "name": "ModuleName",
-    "description": "ModuleName will do something wonderful",
+    "name": "DeathClock",
+    "description": "DeathClock begins a death clock in a separate thread",
     "keywords": ["template"],
-    "author": "Your Name",
+    "author": "Mark Essel",
     "version": "0.0.1",
     "engines" : {
-        "node" : ">=0.4.0"
+        "node" : ">=0.8.0"
     },
-    "main": "./lib/ModuleName",
-    "private": true,
-    "repository": "https://github.com/victusfate/nodeModuleTemplate",
+    "main": "./lib/DeathClock",
+    "repository": "https://github.com/victusfate/nodeDeathClock",
     "scripts": {
         "pretest": "cake build",
         "prepublish": "cake build"
