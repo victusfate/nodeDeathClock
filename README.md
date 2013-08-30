@@ -1,4 +1,4 @@
-![DeathClock](https://github.com/victusfate/nodeDeathClock/raw/master/Dethklok.png)
+![DeathClock](https://github.com/victusfate/nodeDeathClock/raw/master/Dethklok.jpg)
 DeathClock
 ===
 
