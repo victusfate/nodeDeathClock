@@ -1,4 +1,13 @@
+#include <v8.h>
+#include <node.h>
+#include <iostream>
+
+using namespace node;
+using namespace v8;
+using namespace std;
 #include "DeathClock.h"
+
+uv_mutex_t DEATH_CLOCK_IO_MUTEX;
 
 #define BEGIN_ASYNC(_data, async, after) \
 uv_work_t *_req = new uv_work_t; \
@@ -8,24 +17,7 @@ typedef void async_rtn;
 #define RETURN_ASYNC
 #define RETURN_ASYNC_AFTER delete req;
 
-extern uv_mutex_t DEATH_CLOCK_IO_MUTEX;
 
-
-#include <v8.h>
-#include <node.h>
-#include <iostream>
-
-
-#include "moduleName.h"
-
-
-using namespace node;
-using namespace v8;
-using namespace std;
-
-
-// Convert a JavaScript string to a std::string.  To not bother too
-// much with string encodings we just use ascii.
 string ObjectToString(Local<Value> value) {
     String::Utf8Value utf8_value(value);
     return string(*utf8_value);
@@ -141,6 +133,12 @@ void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, 
 
 void DeathClock::Init(Handle<Object> exports) 
 {   
+    int status = uv_mutex_init(&DEATH_CLOCK_IO_MUTEX);
+    if (status != 0) {
+        cout << "DeathClock::Init unable to initialize mutex" << endl;
+        exit(1);
+    }
+
     // Prepare constructor template
     Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
     tpl->SetClassName(String::NewSymbol("DeathClock"));
@@ -193,12 +191,6 @@ void DeathClock::start(double TimeOutFailureSeconds, const string &sErrorMessage
 
     asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,uSecSleep,m_ContinueCountDown,sPathToClean);
 }
-
-DeathClock::~DeathClock() 
-{
-    stopDeathClock();
-}
-
 
 #ifdef _DEATH_CLOCK_NODE_MODULE
 

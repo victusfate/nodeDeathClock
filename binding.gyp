@@ -1,7 +1,7 @@
 {
   'targets': [  
     {
-      'target_name': 'moduleName',
+      'target_name': 'deathClock',
       'sources': ['<!@(ls -1 ./src/*.cc)'],
       'cflags!': [
         '-03',
@@ -20,7 +20,7 @@
       'defines': [
         '_FILE_OFFSET_BITS=64',
         '_LARGEFILE_SOURCE',
-        '_MODULE_NAME_NODE_MODULE'
+        '_DEATH_CLOCK_NODE_MODULE'
       ],
       'include_dirs+': [
         'src/'

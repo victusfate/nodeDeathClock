@@ -11,6 +11,9 @@
 
 using namespace std;
 
+#define PROCESS_OK 0
+#define PROCESS_FAIL 1
+
 
 #define BEGIN_ASYNC(_data, async, after) \
     uv_work_t *_req = new uv_work_t; \
