@@ -7,7 +7,12 @@ using namespace v8;
 using namespace std;
 #include "DeathClock.h"
 
+// globals
 uv_mutex_t DEATH_CLOCK_IO_MUTEX;
+unordered_map<unsigned int,int> DEATH_CLOCK_MAP;
+unsigned long DEATH_CLOCK_ID = 0;
+
+
 
 #define BEGIN_ASYNC(_data, async, after) \
 uv_work_t *_req = new uv_work_t; \
@@ -68,29 +73,34 @@ int GetArgumentStringValue ( const Arguments& args, int argNum, string &value)
 
 }
 
-
-
 async_rtn asyncDeathClock(uv_work_t *req)
 {
     DeathClockData *m = (DeathClockData *)req->data;
 
-    while (m->m_ContinueCountDown) {
-        uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX); 
-        cout << "checking for " << m->m_sErrorMessage << " counter " << m->m_Counter << " max allowed " << m->m_NMaxChecks << " continue count down " << m->m_ContinueCountDown << " pointer " << (void *)m->m_ContinueCountDown << endl;
-        uv_mutex_unlock(&DEATH_CLOCK_IO_MUTEX); 
+    unordered_map<unsigned int, int>::const_iterator pContinueCountDown = DEATH_CLOCK_MAP.find(m->m_clockID);
+    if (pContinueCountDown == DEATH_CLOCK_MAP.end()) {
+        cout << "error finding id " << m-m->m_clockID << " in map exiting ";
+        exit(1);
+    }
+    int continueCountDown = pContinueCountDown->second;
+
+    while (continueCountDown) {
+        // uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX); 
+        // stringstream msg;
+        // msg << "checking for " << m->m_sErrorMessage << " counter " << m->m_Counter << " max allowed " << m->m_NMaxChecks;
+        // cout << msg.str() << endl;
+        // uv_mutex_unlock(&DEATH_CLOCK_IO_MUTEX); 
         
         if (m->m_Counter >= m->m_NMaxChecks) {
-            m->m_ContinueCountDown = 0;
+            DEATH_CLOCK_MAP[m->m_clockID] = 0;
             
-            uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX);
-        
+            uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX);       
             stringstream err;
             err << " ERROR DeathClock::DeathClock end of universe reached, ---<<<*** EXPLOSIONS ***>>>--- message: " << m->m_sErrorMessage;
             cout << err.str() << endl;        
             uv_mutex_unlock(&DEATH_CLOCK_IO_MUTEX);
 
-            usleep(1000); // sleep for a 1ms, then die
-            assert(false); // kill switch, would like a cleaner one to interrupt the main loop and return error state
+            assert(false); // create abort, main loop won't receive any messages if it's frozen
         }
         m->m_Counter++;
         usleep(m->m_uSecSleep); // usleep for x useconds
@@ -107,14 +117,15 @@ async_rtn afterDeathClock(uv_work_t *req)
     RETURN_ASYNC_AFTER
 }
 
-void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep, int &ContinueCountDown)
+void asyncDeathClock(double TimeOutFailureSeconds, const string &sErrorMessage, unsigned int clockID, int uSecSleep)
 {
-    // cout << "asyncDeathClock setup: message " << sErrorMessage << " asyncDeathClock pointer to continue count down " << (void *)&ContinueCountDown << endl;
-    DeathClockData *pm = new DeathClockData(ContinueCountDown);
+    // cout << "asyncDeathClock setup: message " << sErrorMessage << " asyncDeathClock clockID " << clockID << endl;
+    DeathClockData *pm = new DeathClockData;
     pm->m_Counter = 0;
     pm->m_uSecSleep = uSecSleep;
     pm->m_NMaxChecks = TimeOutFailureSeconds / ((double)uSecSleep * 1e-6);
     pm->m_sErrorMessage = sErrorMessage.c_str();
+    pm->m_clockID = clockID;
 
     BEGIN_ASYNC(pm, asyncDeathClock, afterDeathClock);
 }
@@ -126,7 +137,7 @@ void DeathClock::Init(Handle<Object> exports)
         cout << "DeathClock::Init unable to initialize mutex" << endl;
         exit(1);
     }
-
+   
     // Prepare constructor template
     Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
     tpl->SetClassName(String::NewSymbol("DeathClock"));
@@ -146,13 +157,17 @@ Handle<Value> DeathClock::New(const Arguments& args) {
     DeathClock* obj = new DeathClock();
     
     double TimeOutFailureSeconds;
-    int uSecSleep;
+    int uSecSleep = 10000;
     string sErrorMessage;
 
     int targs=0;
     GetArgumentDoubleValue(args,targs++,TimeOutFailureSeconds);
     GetArgumentStringValue(args,targs++,sErrorMessage);
-    GetArgumentIntValue(args,targs++,uSecSleep);
+    // cout << "args.Length() " << args.Length() << endl;
+    if (args.Length() >= 3) GetArgumentIntValue(args,targs++,uSecSleep);
+    else {
+        // cout << "DeathClock::New defaulting to uSecSleep " << uSecSleep << endl;
+    }
     
     obj->start(TimeOutFailureSeconds,sErrorMessage,uSecSleep);
 
@@ -170,13 +185,19 @@ Handle<Value> DeathClock::Stop(const Arguments& args) {
     return scope.Close(Number::New(1));
 }
 
+void DeathClock::stopDeathClock() 
+{ 
+    DEATH_CLOCK_MAP[m_ID] = 0;
+};
+
 void DeathClock::start(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep)
 {
+    DEATH_CLOCK_MAP[m_ID] = 1;
+    // cout << "setting m_ID " << m_ID << " deathclock counter to true for " << sErrorMessage << endl;
     m_uSecSleep  = uSecSleep;
-    m_ContinueCountDown = 1;
     m_sErrorMessage = sErrorMessage;
 
-    asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,uSecSleep,m_ContinueCountDown);
+    asyncDeathClock(TimeOutFailureSeconds,sErrorMessage,m_ID,uSecSleep);
 }
 
 #ifdef _DEATH_CLOCK_NODE_MODULE

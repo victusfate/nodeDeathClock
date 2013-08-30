@@ -6,13 +6,16 @@
 #include <string>
 #include <sstream>
 #include <assert.h>
+#include <tr1/unordered_map>
 
 #include <uv.h>
 
 using namespace std;
+using namespace std::tr1;
 
 #define PROCESS_OK 0
 #define PROCESS_FAIL 1
+extern unsigned long DEATH_CLOCK_ID;
 
 
 #define BEGIN_ASYNC(_data, async, after) \
@@ -24,16 +27,13 @@ using namespace std;
 #define RETURN_ASYNC_AFTER delete req;
 
 struct DeathClockData {
-    DeathClockData(int &bContinueCountDown) : m_ContinueCountDown(bContinueCountDown) {
-        // cout << "DeathClockData took in a reference to an int continue count down " << bContinueCountDown << " ";
-        // cout << m_ContinueCountDown << " pointer " << (void *)&m_ContinueCountDown << endl;
-    };
+    DeathClockData() {};
 
     unsigned long   m_Counter;
     unsigned long   m_NMaxChecks;
     int             m_uSecSleep;
     string          m_sErrorMessage;
-    int            &m_ContinueCountDown;
+    unsigned int    m_clockID;
 };
 
 class DeathClock : public node::ObjectWrap {
@@ -41,7 +41,7 @@ public:
     static void Init(v8::Handle<v8::Object> exports);
 
 protected:
-    DeathClock() {};
+    DeathClock() { m_ID = DEATH_CLOCK_ID++; };
     ~DeathClock() { stopDeathClock(); };
 
     void start(double TimeOutFailureSeconds, const string &sErrorMessage, int uSecSleep = 10000);
@@ -50,15 +50,10 @@ protected:
     static v8::Handle<v8::Value> New(const v8::Arguments& args);
     static v8::Handle<v8::Value> Stop(const v8::Arguments& args);
 
-    void stopDeathClock() { 
-        // cout << "setting continue countdown to zero for " << m_sErrorMessage << " ptr " << (void *)&m_ContinueCountDown << endl;
-        if (m_ContinueCountDown) m_ContinueCountDown = 0; 
-        usleep(m_uSecSleep); // wait for monitor thread to wake up and perceive continue count down, then shut itself down
-        // cout << "                 countdown              " << m_ContinueCountDown << endl;
-    };
+    void stopDeathClock();
 
+    unsigned int m_ID; 
     int m_uSecSleep;
-    int m_ContinueCountDown;
     string m_sErrorMessage;
 };
 
