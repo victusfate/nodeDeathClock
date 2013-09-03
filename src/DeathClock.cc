@@ -82,9 +82,8 @@ async_rtn asyncDeathClock(uv_work_t *req)
         cout << "error finding id " << m-m->m_clockID << " in map exiting ";
         exit(1);
     }
-    int continueCountDown = pContinueCountDown->second;
 
-    while (continueCountDown) {
+    while (pContinueCountDown->second) {
         // uv_mutex_lock(&DEATH_CLOCK_IO_MUTEX); 
         // stringstream msg;
         // msg << "checking for " << m->m_sErrorMessage << " counter " << m->m_Counter << " max allowed " << m->m_NMaxChecks;
